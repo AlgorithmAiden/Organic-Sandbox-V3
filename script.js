@@ -19,7 +19,7 @@ const ctx = canvas.getContext("2d")
 canvas.width = window.innerWidth
 canvas.height = window.innerHeight
 
-const pixelSize = 10
+const pixelSize = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 25 : 10
 const ceilPixelSize = Math.ceil(pixelSize)
 const gridX = Math.floor(canvas.width / pixelSize)
 const gridY = Math.floor(canvas.height / pixelSize)
@@ -313,35 +313,6 @@ const cellTypes = {
                             grid[x][y].root = root
                         }
                     })
-                    // if (
-                    //     x > 0 &&
-                    //     ['air', 'deadPlant'].includes(grid[x - 1][y].type)
-                    // ) {
-                    //     changeCell(x - 1, y, 'flower')
-                    //     grid[x - 1][y].root = root
-                    // }
-                    // if (
-                    //     y > 0 &&
-                    //     ['air', 'deadPlant'].includes(grid[x][y - 1].type)
-                    // ) {
-                    //     changeCell(x, y - 1, 'flower')
-                    //     grid[x][y - 1].root = root
-                    // }
-                    // if (
-                    //     x < gridX - 1 &&
-                    //     ['air', 'deadPlant'].includes(grid[x + 1][y].type)
-                    // ) {
-                    //     changeCell(x + 1, y, 'flower')
-                    //     grid[x + 1][y].root = root
-                    // }
-                    // if (
-                    //     y < gridY - 1 &&
-                    //     ['air', 'deadPlant'].includes(grid[x][y + 1].type)
-                    // ) {
-                    //     changeCell(x, y + 1, 'flower')
-                    //     grid[x][y + 1].root = root
-                    // }
-
                 }
             }
             if (cell.canBurrow && cell.stillTime > 100)
@@ -438,6 +409,7 @@ window.addEventListener('keypress', event => {
 let cells
 let paused = false
 let oneTick = false
+
 setInterval(() => {
     if (oneTick || !paused) {
         //remove hasChanged tag

@@ -48,6 +48,7 @@ const changeCell = (x, y, type, byUser) => {
 }
 
 const contrastMode = random() < .5
+const superGlowMode = contrastMode && random() < .5
 
 function runFunctionInDiamond(centerX, centerY, R, X) {
     let startX = Math.floor(centerX - R)
@@ -468,16 +469,42 @@ setInterval(() => {
     }
 
     //render
-    reRender.forEach(pos => {
-        const x = pos.x
-        const y = pos.y
-        const cell = grid[x][y]
-        ctx.fillStyle = cell.color ?? cellTypes[cell.type].color
-        ctx.fillRect(
-            Math.floor(x * pixelSize),
-            Math.floor(y * pixelSize),
-            ceilPixelSize, ceilPixelSize)
-    })
+    if (superGlowMode) {
+        let flowers = []
+        grid.forEach((colum, x) => colum.forEach((cell, y) => {
+            if (cell.type == 'flower') flowers.push({ x, y, color: cell.color })
+            ctx.fillStyle = cell.color ?? cellTypes[cell.type].color
+            ctx.fillRect(
+                Math.floor(x * pixelSize),
+                Math.floor(y * pixelSize),
+                ceilPixelSize, ceilPixelSize)
+        }))
+        const radius = pixelSize * 10
+        flowers.forEach(flower => {
+            const x = flower.x * pixelSize + pixelSize / 2
+            const y = flower.y * pixelSize + pixelSize / 2
+            const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
+            const color1 = Colors.createColor(['hex', flower.color])
+            const color2 = Colors.createColor(['hex', flower.color])
+            color1.alpha = 5
+            color2.alpha = 0
+            gradient.addColorStop(0, color1.hex)
+            gradient.addColorStop(1, color2.hex)
+            ctx.fillStyle = gradient
+            ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2)
+        })
+
+    } else
+        reRender.forEach(pos => {
+            const x = pos.x
+            const y = pos.y
+            const cell = grid[x][y]
+            ctx.fillStyle = cell.color ?? cellTypes[cell.type].color
+            ctx.fillRect(
+                Math.floor(x * pixelSize),
+                Math.floor(y * pixelSize),
+                ceilPixelSize, ceilPixelSize)
+        })
 
     times.push(Date.now() - lastTick)
     if (times.length == 1000) {

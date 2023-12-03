@@ -26,7 +26,9 @@ canvas.height = gridY * pixelSize
 
 console.log(`The seed for this sim is ${firstSeed}, and the grid is ${gridX}/${gridY}`)
 
+let reRender = []
 const grid = new Array(gridX).fill(0).map(() => new Array(gridY).fill(0).map(() => ({ type: 'air', hasChanged: false, reRender: true })))
+for (let x = 0; x < gridX; x++) for (let y = 0; y < gridY; y++)reRender.push({ x, y })
 
 const checkForRoot = (root) => grid[root.x][root.y].type == 'stem'
 const checkForAnyBranch = (branches) => {
@@ -39,7 +41,8 @@ const checkForAnyBranch = (branches) => {
 }
 const changeCell = (x, y, type, byUser) => {
     const cellType = cellTypes[type]
-    grid[x][y] = { type, heat: 0, hasChanged: true, reRender: true }
+    grid[x][y] = { type, heat: 0, hasChanged: true }
+    reRender.push({ x, y })
     cellType.onCreate ? cellType.onCreate(x, y) : null
     byUser && cellType.onUserCreate ? cellType.onUserCreate(x, y) : null
 }
@@ -300,10 +303,10 @@ const cellTypes = {
                     changeCell(x, y, 'seed')
                     runFunctionInDiamond(x, y, radius, (x, y, distance) => {
                         if (
-                            x > 0 &&
-                            y > 0 &&
-                            x < gridX - 1 &&
-                            y < gridY - 1 &&
+                            x >= 0 &&
+                            y >= 0 &&
+                            x < gridX &&
+                            y < gridY &&
                             grid[x][y].type == 'air'
                         ) {
                             changeCell(x, y, 'flower')
@@ -377,7 +380,7 @@ for (let x = 0; x < gridX; x++) {
     for (let y = Math.round(gridY / 4 * 3); y < gridY; y++)
         changeCell(x, y, 'dirt')
     if (random() < .1)
-        changeCell(x, 0, 'seed')
+        changeCell(x, Math.floor(random() * gridY / 4), 'seed')
 }
 
 let brush = 'air'
@@ -408,6 +411,8 @@ let cells
 let paused = false
 let oneTick = false
 
+let lastTick = Date.now()
+let times = []
 setInterval(() => {
     if (oneTick || !paused) {
         //remove hasChanged tag
@@ -463,16 +468,27 @@ setInterval(() => {
     }
 
     //render
-    grid.forEach((colum, x) => colum.forEach((cell, y) => {
-        if (cell.reRender) {
-            ctx.fillStyle = cell.color ?? cellTypes[cell.type].color
-            ctx.fillRect(
-                Math.floor(x * pixelSize),
-                Math.floor(y * pixelSize),
-                ceilPixelSize, ceilPixelSize)
-            cell.reRender = false
-        }
-    }))
+    reRender.forEach(pos => {
+        const x = pos.x
+        const y = pos.y
+        const cell = grid[x][y]
+        ctx.fillStyle = cell.color ?? cellTypes[cell.type].color
+        ctx.fillRect(
+            Math.floor(x * pixelSize),
+            Math.floor(y * pixelSize),
+            ceilPixelSize, ceilPixelSize)
+    })
+
+    times.push(Date.now() - lastTick)
+    if (times.length == 1000) {
+        let average = 0
+        times.forEach(value => average += value)
+        average /= 1000
+        average /= gridX * gridY
+        times = []
+        console.log(`It takes on average ${average * 1000} milliseconds / 1000 cells per tick`)
+    }
+    lastTick = Date.now()
 
 }, 0)
 
@@ -484,7 +500,7 @@ Fazes:
  ~ 3: move / change
  ~ 4: count dirt / seed counts
  ~ 5: add a seed if there are none
- ~ 6: render / remove hasRendered tags
+ ~ 6: render / reset reRender list
 
 Cell types:
  ~ air:

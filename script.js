@@ -1,4 +1,4 @@
-const firstSeed = Math.random()
+const firstSeed = Math.floor(Math.random() * 1_000_000)
 const random = (() => {
     let seed = firstSeed
     const lcgRandom = () => {
@@ -10,6 +10,8 @@ const random = (() => {
     }
     return lcgRandom
 })()
+
+import * as Colors from './Colors.js'
 
 const canvas = document.getElementById("canvas")
 const ctx = canvas.getContext("2d")
@@ -37,7 +39,6 @@ const checkForAnyBranch = (branches) => {
     )
     return isBranch
 }
-
 const changeCell = (x, y, type, byUser) => {
     const cellType = cellTypes[type]
     grid[x][y] = { type, heat: 0, hasChanged: true, reRender: true }
@@ -45,15 +46,34 @@ const changeCell = (x, y, type, byUser) => {
     byUser && cellType.onUserCreate ? cellType.onUserCreate(x, y) : null
 }
 
+let contrastMode = random() < .5
+
+function runFunctionInDiamond(centerX, centerY, R, X) {
+    let startX = Math.floor(centerX - R)
+    let endX = Math.ceil(centerX + R)
+    let startY = Math.floor(centerY - R)
+    let endY = Math.ceil(centerY + R)
+
+    for (let x = startX; x <= endX; x++) {
+        for (let y = startY; y <= endY; y++) {
+            let manhattanDistance = Math.abs(x - centerX) + Math.abs(y - centerY)
+
+            if (manhattanDistance <= R) {
+                X(x, y, manhattanDistance)
+            }
+        }
+    }
+}
+
 let dirtCount = 0
 const targetDirtCount = Math.round(gridX * gridY / 4)
 
 const cellTypes = {
     air: {
-        color: '#ffffff'
+        color: contrastMode ? '#666666' : '#ffffff'
     },
     dirt: {
-        color: '#996633',
+        color: contrastMode ? '#000000' : '#996633',
         faze3(x, y, cell) {
             if (!cell.hasChanged && y < gridY - 1) {
                 if (['air', 'stem', 'deadPlant'].includes(grid[x][y + 1].type) && (!grid[x][y + 1].hasChanged)) {
@@ -84,7 +104,7 @@ const cellTypes = {
         }
     },
     seed: {
-        color: '#669966',
+        color: contrastMode ? '#000000' : '#00ff00',
         onCreate(x, y) {
             grid[x][y].speed = 0
             grid[x][y].inFlower = true
@@ -150,7 +170,7 @@ const cellTypes = {
         }
     },
     stem: {
-        color: '#009933',
+        color: contrastMode ? '#000000' : '#009933',
         onUserCreate(x, y) { grid[x][y].root = { x, y }; grid[x][y].branches = [{ x, y }] },
         onCreate(x, y) { grid[x][y].branches = [] },
         faze3(x, y, cell) {
@@ -161,7 +181,7 @@ const cellTypes = {
         }
     },
     bud: {
-        color: '#ffb3ff',
+        color: contrastMode ? '#000000' : '#ffb3ff',
         onUserCreate(x, y) { grid[x][y].root = { x, y }; grid[x][y].isRoot = true; grid[x][y].canBurrow = true },
         onCreate(x, y) { grid[x][y].stillTime = 0 },
         faze3(x, y, cell) {
@@ -270,36 +290,57 @@ const cellTypes = {
                 }
                 if (cell.stillTime > 100 || y == 0) {
                     const root = grid[cell.root.x][cell.root.y].root
+                    const color1 = Colors.createColor()
+                    const color2 = Colors.createColor()
+                    color1.saturation = 100
+                    color2.saturation = 100
+                    color1.lightness = 50
+                    color2.lightness = 50
+                    color1.hue = random() * 100
+                    color2.hue = random() * 100
+                    const radius = random() * 5
                     changeCell(x, y, 'seed')
-                    changeCell(cell.root.x, cell.root.y, 'seed')
-                    if (
-                        x > 0 &&
-                        ['air', 'deadPlant'].includes(grid[x - 1][y].type)
-                    ) {
-                        changeCell(x - 1, y, 'flower')
-                        grid[x - 1][y].root = root
-                    }
-                    if (
-                        y > 0 &&
-                        ['air', 'deadPlant'].includes(grid[x][y - 1].type)
-                    ) {
-                        changeCell(x, y - 1, 'flower')
-                        grid[x][y - 1].root = root
-                    }
-                    if (
-                        x < gridX - 1 &&
-                        ['air', 'deadPlant'].includes(grid[x + 1][y].type)
-                    ) {
-                        changeCell(x + 1, y, 'flower')
-                        grid[x + 1][y].root = root
-                    }
-                    if (
-                        y < gridY - 1 &&
-                        ['air', 'deadPlant'].includes(grid[x][y + 1].type)
-                    ) {
-                        changeCell(x, y + 1, 'flower')
-                        grid[x][y + 1].root = root
-                    }
+                    runFunctionInDiamond(x, y, radius, (x, y, distance) => {
+                        if (
+                            x > 0 &&
+                            y > 0 &&
+                            x < gridX - 1 &&
+                            y < gridY - 1 &&
+                            grid[x][y].type == 'air'
+                        ) {
+                            changeCell(x, y, 'flower')
+                            grid[x][y].color = Colors.lerp(color1, color2, distance / radius).hex
+                            grid[x][y].root = root
+                        }
+                    })
+                    // if (
+                    //     x > 0 &&
+                    //     ['air', 'deadPlant'].includes(grid[x - 1][y].type)
+                    // ) {
+                    //     changeCell(x - 1, y, 'flower')
+                    //     grid[x - 1][y].root = root
+                    // }
+                    // if (
+                    //     y > 0 &&
+                    //     ['air', 'deadPlant'].includes(grid[x][y - 1].type)
+                    // ) {
+                    //     changeCell(x, y - 1, 'flower')
+                    //     grid[x][y - 1].root = root
+                    // }
+                    // if (
+                    //     x < gridX - 1 &&
+                    //     ['air', 'deadPlant'].includes(grid[x + 1][y].type)
+                    // ) {
+                    //     changeCell(x + 1, y, 'flower')
+                    //     grid[x + 1][y].root = root
+                    // }
+                    // if (
+                    //     y < gridY - 1 &&
+                    //     ['air', 'deadPlant'].includes(grid[x][y + 1].type)
+                    // ) {
+                    //     changeCell(x, y + 1, 'flower')
+                    //     grid[x][y + 1].root = root
+                    // }
 
                 }
             }
@@ -308,7 +349,7 @@ const cellTypes = {
         }
     },
     flower: {
-        color: '#ff00ff',
+        color: contrastMode ? '#000000' : '#ff00ff',
         onCreate(x, y) { grid[x][y].lifeTime = 0 },
         faze3(x, y, cell) {
             cell.lifeTime++
@@ -319,7 +360,7 @@ const cellTypes = {
         }
     },
     deadPlant: {
-        color: '#003300',
+        color: contrastMode ? '#000000' : '#003300',
         faze3(x, y, cell) {
             if (cell.lastX == x && cell.lastY == y) {
                 cell.stillTime += random()
@@ -454,7 +495,7 @@ setInterval(() => {
     //render
     grid.forEach((colum, x) => colum.forEach((cell, y) => {
         if (cell.reRender) {
-            ctx.fillStyle = cellTypes[cell.type].color
+            ctx.fillStyle = cell.color ?? cellTypes[cell.type].color
             ctx.fillRect(
                 Math.floor(offsetX + x * pixelSize),
                 Math.floor(offsetY + y * pixelSize),

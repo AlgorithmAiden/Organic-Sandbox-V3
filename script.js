@@ -16,15 +16,13 @@ import * as Colors from './Colors.js'
 const canvas = document.getElementById("canvas")
 const ctx = canvas.getContext("2d")
 
-canvas.width = window.innerWidth
-canvas.height = window.innerHeight
-
 const pixelSize = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ? 25 : 10
 const ceilPixelSize = Math.ceil(pixelSize)
-const gridX = Math.floor(canvas.width / pixelSize)
-const gridY = Math.floor(canvas.height / pixelSize)
-const offsetX = canvas.width % pixelSize / 2
-const offsetY = canvas.height % pixelSize / 2
+const gridX = Math.floor(window.innerWidth / pixelSize)
+const gridY = Math.floor(window.innerHeight / pixelSize)
+
+canvas.width = gridX * pixelSize
+canvas.height = gridY * pixelSize
 
 console.log(`The seed for this sim is ${firstSeed}, and the grid is ${gridX}/${gridY}`)
 
@@ -46,7 +44,7 @@ const changeCell = (x, y, type, byUser) => {
     byUser && cellType.onUserCreate ? cellType.onUserCreate(x, y) : null
 }
 
-let contrastMode = random() < .5
+const contrastMode = random() < .5
 
 function runFunctionInDiamond(centerX, centerY, R, X) {
     let startX = Math.floor(centerX - R)
@@ -104,7 +102,7 @@ const cellTypes = {
         }
     },
     seed: {
-        color: contrastMode ? '#000000' : '#00ff00',
+        color: contrastMode ? '#111111' : '#00ff00',
         onCreate(x, y) {
             grid[x][y].speed = 0
             grid[x][y].inFlower = true
@@ -170,7 +168,7 @@ const cellTypes = {
         }
     },
     stem: {
-        color: contrastMode ? '#000000' : '#009933',
+        color: contrastMode ? '#222222' : '#009933',
         onUserCreate(x, y) { grid[x][y].root = { x, y }; grid[x][y].branches = [{ x, y }] },
         onCreate(x, y) { grid[x][y].branches = [] },
         faze3(x, y, cell) {
@@ -181,7 +179,7 @@ const cellTypes = {
         }
     },
     bud: {
-        color: contrastMode ? '#000000' : '#ffb3ff',
+        color: contrastMode ? '#333333' : '#ffb3ff',
         onUserCreate(x, y) { grid[x][y].root = { x, y }; grid[x][y].isRoot = true; grid[x][y].canBurrow = true },
         onCreate(x, y) { grid[x][y].stillTime = 0 },
         faze3(x, y, cell) {
@@ -331,7 +329,7 @@ const cellTypes = {
         }
     },
     deadPlant: {
-        color: contrastMode ? '#000000' : '#003300',
+        color: contrastMode ? '#444444' : '#003300',
         faze3(x, y, cell) {
             if (cell.lastX == x && cell.lastY == y) {
                 cell.stillTime += random()
@@ -388,8 +386,8 @@ const updateMouse = (event) => {
     const x = event.pageX
     const y = event.pageY
 
-    let gx = Math.floor((x - offsetX) / pixelSize)
-    let gy = Math.floor((y - offsetY) / pixelSize)
+    let gx = Math.floor(x / pixelSize)
+    let gy = Math.floor(y / pixelSize)
     if (event.buttons > 0) {
         if (gx >= 0 && gy >= 0 && gx < gridX && gy < gridY)
             changeCell(gx, gy, brush, true)
@@ -469,8 +467,8 @@ setInterval(() => {
         if (cell.reRender) {
             ctx.fillStyle = cell.color ?? cellTypes[cell.type].color
             ctx.fillRect(
-                Math.floor(offsetX + x * pixelSize),
-                Math.floor(offsetY + y * pixelSize),
+                Math.floor(x * pixelSize),
+                Math.floor(y * pixelSize),
                 ceilPixelSize, ceilPixelSize)
             cell.reRender = false
         }
